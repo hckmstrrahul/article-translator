@@ -1,9 +1,7 @@
 # Product Requirements Document (PRD)
 ## Article Translator for Multilingual Designers
 
-**Version:** 2.0  
-**Date:** December 2024  
-**Status:** Enhanced Release
+**Date:** Jun 2025  
 
 ---
 
@@ -376,11 +374,3 @@ User Input → Validation → API Request → Response Processing → Transliter
 - Google Fonts (Inter family)
 
 ---
-
-## Document Control
-
-**Author:** Product Team  
-**Reviewers:** Engineering, Design, Business  
-**Approval:** Approved  
-**Last Updated:** December 2024  
-**Next Review:** After Phase 3 Launch

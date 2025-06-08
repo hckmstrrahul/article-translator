@@ -392,10 +392,49 @@ body {
 
 .input-toggle {
     display: flex;
-    gap: var(--spacing-sm);
+    gap: 0;
     margin-bottom: var(--spacing-md);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    padding: 4px;
+    border: 2px solid var(--border-light);
 }
 
+.toggle-pill {
+    flex: 1;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-xs);
+    min-height: 40px;
+}
+
+.toggle-pill:hover {
+    background: rgba(210, 105, 30, 0.1);
+    color: var(--primary-color);
+}
+
+.toggle-pill.active {
+    background: var(--primary-color);
+    color: white;
+    box-shadow: var(--shadow-sm);
+}
+
+.toggle-pill:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(210, 105, 30, 0.3);
+}
+
+/* Legacy toggle-btn styles for backward compatibility */
 .toggle-btn {
     padding: var(--spacing-sm) var(--spacing-md);
     border: 2px solid var(--border-medium);

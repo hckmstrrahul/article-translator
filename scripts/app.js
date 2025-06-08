@@ -46,8 +46,9 @@ class ArticleTranslator {
             saveApiKeyBtn: document.getElementById('saveApiKey'),
             apiKeyStatus: document.getElementById('apiKeyStatus'),
             
-            // Input method toggle
-            inputMethodToggle: document.getElementById('inputMethodToggle'),
+            // Input method toggle elements
+            urlToggleBtn: document.getElementById('urlToggleBtn'),
+            textToggleBtn: document.getElementById('textToggleBtn'),
             urlInputSection: document.getElementById('urlInputSection'),
             textInputSection: document.getElementById('textInputSection'),
             
@@ -77,49 +78,62 @@ class ArticleTranslator {
 
     bindEvents() {
         // API Key events
-        this.elements.saveApiKeyBtn.addEventListener('click', () => this.handleSaveApiKey());
-        this.elements.apiKeyInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                this.handleSaveApiKey();
-            }
-        });
-
-        // Input method toggle
-        this.elements.inputMethodToggle.addEventListener('click', () => this.handleToggleInputMethod());
-        this.elements.inputMethodToggle.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                this.handleToggleInputMethod();
-            }
-        });
-
+        if (this.elements.saveApiKeyBtn) {
+            this.elements.saveApiKeyBtn.addEventListener('click', () => this.handleSaveApiKey());
+        }
+        
+        // Input method toggle events
+        if (this.elements.urlToggleBtn) {
+            this.elements.urlToggleBtn.addEventListener('click', () => this.handleInputMethodChange('url'));
+            this.elements.urlToggleBtn.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    this.handleInputMethodChange('url');
+                }
+            });
+        }
+        
+        if (this.elements.textToggleBtn) {
+            this.elements.textToggleBtn.addEventListener('click', () => this.handleInputMethodChange('text'));
+            this.elements.textToggleBtn.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    this.handleInputMethodChange('text');
+                }
+            });
+        }
+        
         // URL input events
-        this.elements.fetchBtn.addEventListener('click', () => this.handleFetchArticle());
-        this.elements.urlInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                this.handleFetchArticle();
-            }
-        });
-
-        // Text input events - auto-process on input
-        this.elements.textInput.addEventListener('input', () => this.handleTextInput());
-        this.elements.textInput.addEventListener('paste', () => {
-            // Small delay to allow paste to complete
-            setTimeout(() => this.handleTextInput(), 100);
-        });
-
+        if (this.elements.fetchBtn) {
+            this.elements.fetchBtn.addEventListener('click', () => this.handleFetchArticle());
+        }
+        
+        // Text input events
+        if (this.elements.textInput) {
+            this.elements.textInput.addEventListener('input', () => this.handleTextInput());
+        }
+        
         // Translation events
-        this.elements.translateBtn.addEventListener('click', () => this.handleTranslate());
-        this.elements.languageSelect.addEventListener('change', (e) => {
-            this.currentLanguage = e.target.value;
-            this.enableTranslateButton();
-        });
+        if (this.elements.languageSelect) {
+            this.elements.languageSelect.addEventListener('change', () => this.enableTranslateButton());
+        }
+        
+        if (this.elements.translateBtn) {
+            this.elements.translateBtn.addEventListener('click', () => this.handleTranslate());
+        }
     }
 
     setupAccessibility() {
-        // Add ARIA labels and roles where needed
-        this.elements.inputMethodToggle.setAttribute('role', 'switch');
-        this.elements.inputMethodToggle.setAttribute('aria-checked', 'false');
+        // Set up ARIA attributes for input method toggle
+        if (this.elements.urlToggleBtn) {
+            this.elements.urlToggleBtn.setAttribute('role', 'tab');
+            this.elements.urlToggleBtn.setAttribute('aria-selected', 'true');
+        }
+        
+        if (this.elements.textToggleBtn) {
+            this.elements.textToggleBtn.setAttribute('role', 'tab');
+            this.elements.textToggleBtn.setAttribute('aria-selected', 'false');
+        }
         
         // Set up live regions for status updates
         if (!this.elements.statusAnnouncement) {
@@ -135,6 +149,17 @@ class ArticleTranslator {
             document.body.appendChild(announcer);
             this.elements.statusAnnouncement = announcer;
         }
+        
+        // Set up form labels and descriptions
+        const inputs = document.querySelectorAll('input, textarea, select');
+        inputs.forEach(input => {
+            if (!input.getAttribute('aria-label') && !input.getAttribute('aria-labelledby')) {
+                const label = document.querySelector(`label[for="${input.id}"]`);
+                if (label) {
+                    input.setAttribute('aria-labelledby', label.id || `${input.id}-label`);
+                }
+            }
+        });
     }
 
     loadSavedApiKey() {
@@ -182,29 +207,41 @@ class ArticleTranslator {
         status.style.display = 'block';
     }
 
-    handleToggleInputMethod() {
-        const toggle = this.elements.inputMethodToggle;
-        const urlSection = this.elements.urlInputSection;
-        const textSection = this.elements.textInputSection;
+    handleInputMethodChange(method) {
+        const isUrlMethod = method === 'url';
         
-        // Check current state - if URL section is visible, switch to text
-        const isUrlVisible = urlSection.style.display !== 'none';
-        
-        if (isUrlVisible) {
-            // Switch to manual text mode
-            urlSection.style.display = 'none';
-            textSection.style.display = 'block';
-            toggle.textContent = '🔗 Switch to URL';
-            toggle.setAttribute('aria-checked', 'false');
-            this.announceStatus('Switched to manual text input mode');
-        } else {
-            // Switch to URL mode
-            urlSection.style.display = 'block';
-            textSection.style.display = 'none';
-            toggle.textContent = '📝 Switch to Manual Text';
-            toggle.setAttribute('aria-checked', 'true');
-            this.announceStatus('Switched to URL input mode');
+        // Update button states
+        if (this.elements.urlToggleBtn) {
+            this.elements.urlToggleBtn.classList.toggle('active', isUrlMethod);
+            this.elements.urlToggleBtn.setAttribute('aria-selected', isUrlMethod.toString());
         }
+        
+        if (this.elements.textToggleBtn) {
+            this.elements.textToggleBtn.classList.toggle('active', !isUrlMethod);
+            this.elements.textToggleBtn.setAttribute('aria-selected', (!isUrlMethod).toString());
+        }
+        
+        // Toggle input sections
+        if (this.elements.urlInputSection) {
+            this.elements.urlInputSection.style.display = isUrlMethod ? 'block' : 'none';
+        }
+        
+        if (this.elements.textInputSection) {
+            this.elements.textInputSection.style.display = isUrlMethod ? 'none' : 'block';
+        }
+        
+        // Clear previous content when switching
+        if (this.elements.articleContent) {
+            this.elements.articleContent.innerHTML = '';
+        }
+        
+        if (this.elements.translationResult) {
+            this.elements.translationResult.innerHTML = '';
+        }
+        
+        // Announce the change
+        const methodName = isUrlMethod ? 'URL' : 'Manual Text';
+        this.announceStatus(`Switched to ${methodName} input method`);
     }
 
     async handleFetchArticle() {

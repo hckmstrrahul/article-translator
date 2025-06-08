@@ -73,13 +73,25 @@
                             <div class="input-toggle" role="tablist" aria-label="Input method selection">
                                 <button 
                                     type="button" 
-                                    id="inputMethodToggle" 
-                                    class="toggle-btn active"
+                                    id="urlToggleBtn" 
+                                    class="toggle-pill active"
                                     role="tab"
                                     aria-selected="true"
                                     aria-controls="urlInputSection"
+                                    data-input-type="url"
                                 >
-                                    🔗 Switch to Manual Text
+                                    🔗 URL
+                                </button>
+                                <button 
+                                    type="button" 
+                                    id="textToggleBtn" 
+                                    class="toggle-pill"
+                                    role="tab"
+                                    aria-selected="false"
+                                    aria-controls="textInputSection"
+                                    data-input-type="text"
+                                >
+                                    📝 Manual Text
                                 </button>
                             </div>
                             
@@ -204,7 +216,7 @@
         
         <!-- Footer -->
         <footer class="footer">
-            <p>&copy; 2024 Article Translator. Powered by Sarvam AI.</p>
+            <p>&copy; 2025 Article Translator by <a href="https://x.com/hckmstrrahul" target="_blank" rel="noopener noreferrer">@hckmstrrahul</a>. Powered by Sarvam AI.</p>
         </footer>
     </div>
     
