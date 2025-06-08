@@ -333,41 +333,262 @@ class ArticleTranslator {
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, 'text/html');
         
-        // Remove script and style elements
-        const scripts = doc.querySelectorAll('script, style, nav, header, footer, aside, .sidebar, .navigation, .menu');
-        scripts.forEach(el => el.remove());
+        // Remove unwanted elements more comprehensively
+        const unwantedSelectors = [
+            'script', 'style', 'noscript', 'iframe', 'embed', 'object',
+            'header', 'footer', 'nav', 'aside', 
+            '.header', '.footer', '.navigation', '.nav', '.sidebar', '.menu',
+            '.social-share', '.social-sharing', '.share-buttons',
+            '.advertisement', '.ads', '.ad', '.banner',
+            '.comments', '.comment-section', '.disqus',
+            '.related-posts', '.related-articles', '.recommendations',
+            '.newsletter', '.subscription', '.signup',
+            '.breadcrumb', '.breadcrumbs',
+            '.author-bio', '.author-info',
+            '.tags', '.categories', '.metadata',
+            '.popup', '.modal', '.overlay',
+            '[role="banner"]', '[role="navigation"]', '[role="complementary"]',
+            '[role="contentinfo"]', '[aria-label*="navigation"]',
+            '[class*="cookie"]', '[class*="gdpr"]'
+        ];
         
-        // Extract text from common article containers
-        const selectors = [
+        unwantedSelectors.forEach(selector => {
+            const elements = doc.querySelectorAll(selector);
+            elements.forEach(el => el.remove());
+        });
+        
+        // Try to find the main article content with better selectors
+        const articleSelectors = [
             'article',
             '[role="main"]',
-            '.content',
+            'main article',
+            'main .content',
+            'main .post',
             '.article-content',
             '.post-content',
             '.entry-content',
             '.article-body',
             '.post-body',
-            'main .content',
-            '.main-content'
+            '.content-body',
+            '.story-body',
+            '.article-text',
+            '.post-text',
+            '.content-area',
+            '.main-content',
+            '.primary-content',
+            '[itemprop="articleBody"]',
+            '.article-wrapper .content',
+            '.post-wrapper .content'
         ];
         
-        for (const selector of selectors) {
-            const element = doc.querySelector(selector);
-            if (element && element.textContent.trim().length > 200) {
-                return this.cleanText(element.textContent.trim());
+        let bestElement = null;
+        let bestScore = 0;
+        
+        // Score each potential article container
+        for (const selector of articleSelectors) {
+            const elements = doc.querySelectorAll(selector);
+            
+            for (const element of elements) {
+                const score = this.scoreArticleElement(element);
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestElement = element;
+                }
             }
         }
         
-        // Fallback to body text, but filter out navigation and other non-content
-        const bodyText = doc.body.textContent.trim();
-        return this.cleanText(bodyText);
+        if (bestElement && bestScore > 100) {
+            return this.extractFormattedContent(bestElement);
+        }
+        
+        // Fallback: try to find content in main or body, but clean it up
+        const fallbackSelectors = ['main', 'body'];
+        for (const selector of fallbackSelectors) {
+            const element = doc.querySelector(selector);
+            if (element) {
+                // Remove more unwanted elements from fallback
+                const moreUnwanted = element.querySelectorAll(unwantedSelectors.join(', '));
+                moreUnwanted.forEach(el => el.remove());
+                
+                const score = this.scoreArticleElement(element);
+                if (score > 50) {
+                    return this.extractFormattedContent(element);
+                }
+            }
+        }
+        
+        // Last resort: return cleaned body text
+        return this.cleanText(doc.body.textContent.trim());
+    }
+    
+    scoreArticleElement(element) {
+        if (!element) return 0;
+        
+        let score = 0;
+        const text = element.textContent.trim();
+        const textLength = text.length;
+        
+        // Base score from text length
+        score += Math.min(textLength / 10, 100);
+        
+        // Bonus for paragraph tags (indicates structured content)
+        const paragraphs = element.querySelectorAll('p');
+        score += paragraphs.length * 5;
+        
+        // Bonus for headings (indicates article structure)
+        const headings = element.querySelectorAll('h1, h2, h3, h4, h5, h6');
+        score += headings.length * 3;
+        
+        // Bonus for lists (indicates structured content)
+        const lists = element.querySelectorAll('ul, ol, li');
+        score += lists.length * 2;
+        
+        // Penalty for too many links (might be navigation)
+        const links = element.querySelectorAll('a');
+        const linkRatio = links.length / Math.max(paragraphs.length, 1);
+        if (linkRatio > 2) {
+            score -= linkRatio * 10;
+        }
+        
+        // Bonus for article-like class names
+        const className = element.className.toLowerCase();
+        const articleKeywords = ['article', 'post', 'content', 'story', 'body', 'text'];
+        for (const keyword of articleKeywords) {
+            if (className.includes(keyword)) {
+                score += 20;
+            }
+        }
+        
+        // Penalty for navigation-like class names
+        const navKeywords = ['nav', 'menu', 'sidebar', 'header', 'footer'];
+        for (const keyword of navKeywords) {
+            if (className.includes(keyword)) {
+                score -= 30;
+            }
+        }
+        
+        return score;
+    }
+    
+    extractFormattedContent(element) {
+        // Clone the element to avoid modifying the original
+        const clone = element.cloneNode(true);
+        
+        // Remove any remaining unwanted elements
+        const unwantedInContent = clone.querySelectorAll(
+            '.social-share, .share-buttons, .advertisement, .ads, .ad, ' +
+            '.comments, .related-posts, .author-bio, .tags, .metadata, ' +
+            '.newsletter, .subscription, script, style, noscript'
+        );
+        unwantedInContent.forEach(el => el.remove());
+        
+        // Convert to formatted text while preserving structure
+        return this.htmlToFormattedText(clone);
+    }
+    
+    htmlToFormattedText(element) {
+        let result = '';
+        
+        for (const node of element.childNodes) {
+            if (node.nodeType === Node.TEXT_NODE) {
+                const text = node.textContent.trim();
+                if (text) {
+                    result += text + ' ';
+                }
+            } else if (node.nodeType === Node.ELEMENT_NODE) {
+                const tagName = node.tagName.toLowerCase();
+                
+                switch (tagName) {
+                    case 'h1':
+                    case 'h2':
+                    case 'h3':
+                    case 'h4':
+                    case 'h5':
+                    case 'h6':
+                        result += '\n\n' + node.textContent.trim() + '\n\n';
+                        break;
+                        
+                    case 'p':
+                        const pText = this.htmlToFormattedText(node).trim();
+                        if (pText) {
+                            result += pText + '\n\n';
+                        }
+                        break;
+                        
+                    case 'br':
+                        result += '\n';
+                        break;
+                        
+                    case 'ul':
+                    case 'ol':
+                        result += '\n' + this.htmlToFormattedText(node) + '\n';
+                        break;
+                        
+                    case 'li':
+                        const liText = this.htmlToFormattedText(node).trim();
+                        if (liText) {
+                            result += '• ' + liText + '\n';
+                        }
+                        break;
+                        
+                    case 'blockquote':
+                        const quoteText = this.htmlToFormattedText(node).trim();
+                        if (quoteText) {
+                            result += '\n"' + quoteText + '"\n\n';
+                        }
+                        break;
+                        
+                    case 'strong':
+                    case 'b':
+                        result += '**' + node.textContent.trim() + '**';
+                        break;
+                        
+                    case 'em':
+                    case 'i':
+                        result += '*' + node.textContent.trim() + '*';
+                        break;
+                        
+                    case 'code':
+                        result += '`' + node.textContent.trim() + '`';
+                        break;
+                        
+                    case 'pre':
+                        result += '\n```\n' + node.textContent.trim() + '\n```\n\n';
+                        break;
+                        
+                    case 'div':
+                    case 'section':
+                    case 'article':
+                        const divText = this.htmlToFormattedText(node);
+                        if (divText.trim()) {
+                            result += divText;
+                        }
+                        break;
+                        
+                    default:
+                        // For other elements, just extract text content
+                        const text = this.htmlToFormattedText(node);
+                        if (text.trim()) {
+                            result += text;
+                        }
+                        break;
+                }
+            }
+        }
+        
+        return result;
     }
     
     cleanText(text) {
-        // Remove extra whitespace and clean up the text
+        // Improved text cleaning that preserves some formatting
         return text
-            .replace(/\s+/g, ' ')
-            .replace(/\n\s*\n/g, '\n\n')
+            // Normalize whitespace but preserve intentional line breaks
+            .replace(/[ \t]+/g, ' ')
+            // Preserve paragraph breaks
+            .replace(/\n\s*\n\s*\n+/g, '\n\n')
+            // Clean up excessive spacing
+            .replace(/^\s+|\s+$/gm, '')
+            // Remove empty lines at start and end
             .trim();
     }
 
@@ -389,7 +610,8 @@ class ArticleTranslator {
     displayOriginalContent(content) {
         if (this.elements.originalContent) {
             if (content) {
-                this.elements.originalContent.innerHTML = `<div class="article-content">${this.escapeHtml(content)}</div>`;
+                const formattedContent = this.formatContentForDisplay(content);
+                this.elements.originalContent.innerHTML = `<div class="article-content">${formattedContent}</div>`;
             } else {
                 this.elements.originalContent.innerHTML = `
                     <div class="empty-state">
@@ -467,7 +689,7 @@ class ArticleTranslator {
     }
 
     async translateText(text, targetLanguage) {
-        const chunks = this.chunkText(text, 1000); // Split into smaller chunks
+        const chunks = this.chunkText(text, 1000);
         const translatedChunks = [];
 
         for (const chunk of chunks) {
@@ -475,28 +697,49 @@ class ArticleTranslator {
             translatedChunks.push(translatedChunk);
         }
 
-        return translatedChunks.join(' ');
+        // Join chunks with proper spacing to maintain formatting
+        return translatedChunks.join('\n\n');
     }
 
     chunkText(text, maxLength) {
         const chunks = [];
-        const sentences = text.split(/[.!?]+/);
+        
+        // Split by paragraphs first to preserve formatting
+        const paragraphs = text.split('\n\n').filter(p => p.trim());
         let currentChunk = '';
 
-        for (const sentence of sentences) {
-            if (currentChunk.length + sentence.length > maxLength && currentChunk) {
+        for (const paragraph of paragraphs) {
+            // If adding this paragraph would exceed the limit and we have content
+            if (currentChunk.length + paragraph.length > maxLength && currentChunk) {
                 chunks.push(currentChunk.trim());
-                currentChunk = sentence;
+                currentChunk = paragraph;
             } else {
-                currentChunk += sentence + '.';
+                currentChunk += (currentChunk ? '\n\n' : '') + paragraph;
+            }
+            
+            // If a single paragraph is too long, split by sentences
+            if (currentChunk.length > maxLength) {
+                const sentences = currentChunk.split(/[.!?]+/);
+                let sentenceChunk = '';
+                
+                for (const sentence of sentences) {
+                    if (sentenceChunk.length + sentence.length > maxLength && sentenceChunk) {
+                        chunks.push(sentenceChunk.trim());
+                        sentenceChunk = sentence;
+                    } else {
+                        sentenceChunk += sentence + '.';
+                    }
+                }
+                
+                currentChunk = sentenceChunk;
             }
         }
 
-        if (currentChunk) {
+        if (currentChunk.trim()) {
             chunks.push(currentChunk.trim());
         }
 
-        return chunks;
+        return chunks.filter(chunk => chunk.length > 0);
     }
 
     async translateChunk(text, targetLanguage) {
@@ -626,8 +869,66 @@ class ArticleTranslator {
 
     displayTranslatedContent(content) {
         if (this.elements.translatedContent) {
-            this.elements.translatedContent.innerHTML = `<div class="article-content">${this.escapeHtml(content)}</div>`;
+            const formattedContent = this.formatContentForDisplay(content);
+            this.elements.translatedContent.innerHTML = `<div class="article-content">${formattedContent}</div>`;
         }
+    }
+
+    formatContentForDisplay(content) {
+        if (!content) return '';
+        
+        // Convert markdown-like formatting to HTML for better display
+        let formatted = this.escapeHtml(content);
+        
+        // Convert headings
+        formatted = formatted.replace(/^(.+)$/gm, (match, line) => {
+            const trimmed = line.trim();
+            if (trimmed && !trimmed.startsWith('•') && !trimmed.startsWith('**') && !trimmed.startsWith('*') && !trimmed.startsWith('`')) {
+                // Check if this line looks like a heading (short line followed by paragraph break)
+                const nextLineIndex = content.indexOf(line) + line.length;
+                const nextPart = content.substring(nextLineIndex, nextLineIndex + 10);
+                if (nextPart.startsWith('\n\n') && line.length < 100 && !line.includes('.')) {
+                    return `<h3 class="content-heading">${trimmed}</h3>`;
+                }
+            }
+            return match;
+        });
+        
+        // Convert bold text
+        formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        
+        // Convert italic text
+        formatted = formatted.replace(/\*(.*?)\*/g, '<em>$1</em>');
+        
+        // Convert inline code
+        formatted = formatted.replace(/`(.*?)`/g, '<code>$1</code>');
+        
+        // Convert code blocks
+        formatted = formatted.replace(/```\n([\s\S]*?)\n```/g, '<pre><code>$1</code></pre>');
+        
+        // Convert quotes
+        formatted = formatted.replace(/^"(.*?)"$/gm, '<blockquote>$1</blockquote>');
+        
+        // Convert bullet points
+        formatted = formatted.replace(/^• (.+)$/gm, '<li>$1</li>');
+        
+        // Wrap consecutive list items in ul tags
+        formatted = formatted.replace(/(<li>.*<\/li>\s*)+/gs, '<ul>$&</ul>');
+        
+        // Convert double line breaks to paragraphs
+        const paragraphs = formatted.split('\n\n').filter(p => p.trim());
+        formatted = paragraphs.map(p => {
+            const trimmed = p.trim();
+            if (trimmed && !trimmed.startsWith('<') && !trimmed.includes('<li>')) {
+                return `<p>${trimmed}</p>`;
+            }
+            return trimmed;
+        }).join('\n');
+        
+        // Clean up any remaining single line breaks
+        formatted = formatted.replace(/\n(?!<)/g, '<br>');
+        
+        return formatted;
     }
 
     showLoading(show, text = 'Processing...') {
