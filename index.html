@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Translate design articles into multiple Indian languages using AI-powered translation">
+    
+    <!-- Preconnect for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://api.sarvam.ai">
+    
+    <title>Article Translator</title>
+    
+    <!-- External Stylesheets -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+    <!-- Skip Link for Accessibility -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+    
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1>Article Translator</h1>
+                <p>Transform your articles into multiple languages with AI-powered translation and transliteration</p>
+            </div>
+            
+            <!-- API Key Configuration in Header -->
+            <div class="header-api-key">
+                <label for="apiKey">Sarvam AI API Key</label>
+                <div class="input-group">
+                    <input 
+                        type="password" 
+                        id="apiKey" 
+                        class="form-input" 
+                        placeholder="Enter your API key"
+                        autocomplete="off"
+                    >
+                    <button type="button" id="saveApiKey" class="btn btn-primary">Save</button>
+                </div>
+                <div id="apiKeyStatus" class="status-message" style="display: none;"></div>
+            </div>
+        </header>
+        
+        <!-- Configuration Section (Hidden) -->
+        <section class="config-section" id="configSection">
+            <!-- This section is now hidden as API key is in header -->
+        </section>
+        
+        <!-- Main Content -->
+        <main id="main-content" class="main-content">
+            <!-- Configuration Section -->
+            <section class="config-section" aria-labelledby="config-heading">
+                <h2 id="config-heading">Configuration</h2>
+            </section>
+            
+            <!-- Two-Pane Content Layout -->
+            <div class="content-layout">
+                <!-- Input Pane -->
+                <section class="content-pane" aria-labelledby="input-heading">
+                    <div class="pane-header">
+                        <h2 id="input-heading" class="pane-title">
+                            📝 Article Input
+                        </h2>
+                    </div>
+                    
+                    <div class="pane-content">
+                        <!-- Input Method Toggle -->
+                        <div class="input-section">
+                            <div class="input-toggle" role="tablist" aria-label="Input method selection">
+                                <button 
+                                    type="button" 
+                                    id="inputMethodToggle" 
+                                    class="toggle-btn active"
+                                    role="tab"
+                                    aria-selected="true"
+                                    aria-controls="urlInputSection"
+                                >
+                                    🔗 Switch to Manual Text
+                                </button>
+                            </div>
+                            
+                            <!-- URL Input Panel -->
+                            <div id="urlInputSection" class="input-panel" role="tabpanel" aria-labelledby="url-toggle">
+                                <div class="form-group">
+                                    <label for="urlInput">Article URL</label>
+                                    <div class="input-group">
+                                        <input 
+                                            type="url" 
+                                            id="urlInput" 
+                                            class="form-input"
+                                            placeholder="https://example.com/design-article"
+                                            aria-describedby="url-help"
+                                        >
+                                        <button 
+                                            type="button" 
+                                            id="fetchBtn" 
+                                            class="btn btn-secondary"
+                                        >
+                                            📥 Fetch Article
+                                        </button>
+                                    </div>
+                                    <small id="url-help" class="form-help">Enter the URL of a design article to fetch and translate</small>
+                                </div>
+                            </div>
+                            
+                            <!-- Text Input Panel -->
+                            <div id="textInputSection" class="input-panel" style="display: none;" role="tabpanel" aria-labelledby="text-toggle">
+                                <div class="form-group">
+                                    <label for="textInput">Article Text</label>
+                                    <textarea 
+                                        id="textInput" 
+                                        class="form-textarea"
+                                        placeholder="Paste your article text here..."
+                                        aria-describedby="text-help"
+                                    ></textarea>
+                                    <small id="text-help" class="form-help">Paste the article content you want to translate</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Original Content Display -->
+                        <div class="content-display" aria-labelledby="original-content-heading">
+                            <div id="originalContent" class="article-content">
+                                <div class="empty-state">
+                                    <div class="empty-state-icon">📄</div>
+                                    <div class="empty-state-text">No content loaded</div>
+                                    <div class="empty-state-subtext">Fetch an article from URL or paste text to get started</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Translation Pane -->
+                <section class="content-pane" aria-labelledby="translation-heading">
+                    <div class="pane-header">
+                        <h2 id="translation-heading" class="pane-title">
+                            🌐 Translation
+                        </h2>
+                        <div id="translation-status" class="status-indicator" aria-live="polite"></div>
+                    </div>
+                    
+                    <div class="pane-content">
+                        <!-- Translation Controls -->
+                        <div class="translation-controls">
+                            <label for="languageSelect">Translate to:</label>
+                            <select id="languageSelect" class="form-select" aria-label="Select target language">
+                                <option value="">Select Language</option>
+                                <optgroup label="🌐 Translation">
+                                    <option value="hi-IN">Hindi (हिंदी)</option>
+                                    <option value="bn-IN">Bengali (বাংলা)</option>
+                                    <option value="te-IN">Telugu (తెలుగు)</option>
+                                    <option value="mr-IN">Marathi (मराठी)</option>
+                                    <option value="ta-IN">Tamil (தமிழ்)</option>
+                                    <option value="gu-IN">Gujarati (ગુજરાતી)</option>
+                                    <option value="kn-IN">Kannada (ಕನ್ನಡ)</option>
+                                    <option value="ml-IN">Malayalam (മലയാളം)</option>
+                                    <option value="pa-IN">Punjabi (ਪੰਜਾਬੀ)</option>
+                                    <option value="or-IN">Odia (ଓଡ଼ିଆ)</option>
+                                </optgroup>
+                                <optgroup label="🔤 Transliteration">
+                                    <option value="transliterate-hi">Hindi Transliteration (हिंदी)</option>
+                                    <option value="transliterate-bn">Bengali Transliteration (বাংলা)</option>
+                                    <option value="transliterate-te">Telugu Transliteration (తెలుగు)</option>
+                                    <option value="transliterate-mr">Marathi Transliteration (मराठी)</option>
+                                    <option value="transliterate-ta">Tamil Transliteration (தமிழ்)</option>
+                                    <option value="transliterate-gu">Gujarati Transliteration (ગુજરાતી)</option>
+                                    <option value="transliterate-kn">Kannada Transliteration (ಕನ್ನಡ)</option>
+                                    <option value="transliterate-ml">Malayalam Transliteration (മലയാളം)</option>
+                                    <option value="transliterate-pa">Punjabi Transliteration (ਪੰਜਾਬੀ)</option>
+                                    <option value="transliterate-or">Odia Transliteration (ଓଡ଼ିଆ)</option>
+                                </optgroup>
+                            </select>
+                            <button 
+                                type="button" 
+                                id="translateBtn" 
+                                class="btn btn-primary"
+                                disabled
+                                aria-describedby="translate-help"
+                            >
+                                🌐 Translate
+                            </button>
+                        </div>
+                        <small id="translate-help" class="form-help">Select a language and ensure content is loaded to enable translation</small>
+                        
+                        <!-- Translated Content Display -->
+                        <div class="content-display" aria-labelledby="translated-content-heading">
+                            <div id="translatedContent" class="article-content">
+                                <div class="empty-state">
+                                    <div class="empty-state-icon">🌐</div>
+                                    <div class="empty-state-text">No translation yet</div>
+                                    <div class="empty-state-subtext">Load content and select a target language to translate</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+        
+        <!-- Footer -->
+        <footer class="footer">
+            <p>&copy; 2024 Article Translator. Powered by Sarvam AI.</p>
+        </footer>
+    </div>
+    
+    <!-- Status Elements -->
+    <div id="statusAnnouncement" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+    <div id="errorMessage" class="error-message" style="display: none;"></div>
+    <div id="loadingIndicator" class="loading-overlay" style="display: none;">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <div class="loading-text">Processing...</div>
+        </div>
+    </div>
+
+    <script src="scripts/app.js"></script>
+</body>
+</html>
